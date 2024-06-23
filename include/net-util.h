@@ -10,7 +10,8 @@ struct address_data_node {
 	struct list list;
 };
 
-struct list get_interface_address(int family, int flags, int masks);
+struct list *get_interface_address(int family, int flags, int masks);
+void free_interface_address(struct list *head);
 
 char *get_host_from_address(struct sockaddr_storage *storage, int flags);
 

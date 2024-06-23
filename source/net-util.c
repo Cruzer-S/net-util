@@ -9,14 +9,25 @@
 
 #include <ifaddrs.h>
 
-struct list get_interface_address(int family, int flags, int masks)
+struct list *get_interface_address(int family, int flags, int masks)
 {
 	struct ifaddrs *ifaddrs;
 	struct address_data_node *node;
-	struct list head = LIST_HEAD_INIT(head);
+	struct list *head;
+
+	size_t addrlen;
+
+	head = malloc(sizeof(struct list));
+	if (head == NULL)
+		goto RETURN_NULL;
+
+	list_init_head(head);
 
 	if (getifaddrs(&ifaddrs) != 0) 
-		goto RETURN_ERR;
+		goto FREE_HEAD;
+
+	addrlen = (family == AF_INET) ? sizeof(struct sockaddr_in)
+		                      : sizeof(struct sockaddr_in6);
 
 	for (struct ifaddrs *ifa = ifaddrs; ifa; ifa = ifa->ifa_next)
 	{
@@ -36,22 +47,30 @@ struct list get_interface_address(int family, int flags, int masks)
 		if (node == NULL)
 			goto FREE_NODE;
 
-		memcpy(&node->address, &ifa->ifa_addr,
-	 	       sizeof(struct sockaddr_storage));
+		memcpy(&node->address, ifa->ifa_addr, addrlen);
 
-		list_add(&head, &node->list);
+		list_add(head, &node->list);
 	}
 
 	freeifaddrs(ifaddrs);
 
 	return head;
 
-FREE_NODE:	LIST_FOREACH_ENTRY_SAFE(&head, ptr, 
+FREE_NODE:	LIST_FOREACH_ENTRY_SAFE(head, ptr, 
 				   	struct address_data_node, list)
 			free(ptr);
 FREE_IFADDRS:	freeifaddrs(ifaddrs);
-RETURN_ERR: 	return (struct list){ NULL, NULL };
+FREE_HEAD:	free(head);
+RETURN_NULL: 	return NULL;
 };
+
+void free_interface_address(struct list *head)
+{
+	LIST_FOREACH_ENTRY_SAFE(head, ptr, struct address_data_node, list)
+		free(ptr);
+
+	free(head);
+}
 
 char *get_host_from_address(struct sockaddr_storage *storage, int flags)
 {
@@ -65,7 +84,7 @@ char *get_host_from_address(struct sockaddr_storage *storage, int flags)
 		addrlen = sizeof(struct sockaddr_in6);
 
 	int gai_ret = getnameinfo(
-		(struct sockaddr *) &storage, addrlen,
+		(struct sockaddr *) storage, addrlen,
 		address, NI_MAXHOST,
 		NULL, 0, flags
 	);
