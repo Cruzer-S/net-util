@@ -1,5 +1,6 @@
 #include "net-util.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
@@ -8,6 +9,14 @@
 #include <unistd.h>
 
 #include <ifaddrs.h>
+
+static thread_local char error_buffer[BUFSIZ];
+static thread_local char *error;
+
+const char * const net_util_error(void)
+{
+	return error;
+}
 
 struct list *get_interface_address(int family, int flags, int masks)
 {
@@ -18,13 +27,17 @@ struct list *get_interface_address(int family, int flags, int masks)
 	size_t addrlen;
 
 	head = malloc(sizeof(struct list));
-	if (head == NULL)
+	if (head == NULL) {
+		error = "failed to malloc()";
 		goto RETURN_NULL;
+	}
 
 	list_init_head(head);
 
-	if (getifaddrs(&ifaddrs) != 0) 
+	if (getifaddrs(&ifaddrs) != 0) {
+		error = "failed to getifaddrs()";
 		goto FREE_HEAD;
+	}
 
 	addrlen = (family == AF_INET) ? sizeof(struct sockaddr_in)
 		                      : sizeof(struct sockaddr_in6);
@@ -44,8 +57,10 @@ struct list *get_interface_address(int family, int flags, int masks)
 			continue;
 		
 		node = malloc(sizeof(struct address_data_node));
-		if (node == NULL)
+		if (node == NULL) {
+			error = "failed to malloc()";
 			goto FREE_NODE;
+		}
 
 		memcpy(&node->address, ifa->ifa_addr, addrlen);
 
@@ -89,8 +104,12 @@ char *get_host_from_address(struct sockaddr_storage *storage, int flags)
 		NULL, 0, flags
 	);
 
-	if (gai_ret != 0)
+	if (gai_ret != 0) {
+		sprintf(error_buffer, "failed to getnameinfo(): %s", 
+	  		gai_strerror(gai_ret));
+		error = error_buffer;
 		return NULL;
+	}
 
 	return address;
 }
@@ -108,23 +127,32 @@ int server_create(char *hostname, char *service, int backlog)
 	addr_req.ai_flags =  AI_ALL;
 
 	gai_ret = getaddrinfo(hostname, service, &addr_req, &server_ai);
-	if (gai_ret == -1)
+	if (gai_ret != 0) {
+		sprintf(error_buffer, "failed to getaddrinfo(): %s",
+	  		gai_strerror(gai_ret));
+		error = error_buffer;
 		goto RETURN_ERROR;
+	}
 
 	server_fd = socket(
 		server_ai->ai_family,
 		server_ai->ai_socktype,
 		server_ai->ai_protocol
 	);
-
-	if (server_fd == -1)
+	if (server_fd == -1) {
+		error = "failed to socket()";
 		goto FREEADDRINFO;
+	}
 
-	if (bind(server_fd, server_ai->ai_addr, server_ai->ai_addrlen) == -1)
+	if (bind(server_fd, server_ai->ai_addr, server_ai->ai_addrlen) == -1) {
+		error = "failed to bind()";
 		goto CLOSE_SERVER;
+	}
 
-	if (listen(server_fd, backlog) == -1)
+	if (listen(server_fd, backlog) == -1) {
+		error = "failed to listen()";
 		goto CLOSE_SERVER;
+	}
 
 	freeaddrinfo(server_ai);
 

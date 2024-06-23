@@ -17,4 +17,6 @@ char *get_host_from_address(struct sockaddr_storage *storage, int flags);
 
 int server_create(char *hostname, char *service, int backlog);
 
+const char * const net_util_error(void);
+
 #endif
