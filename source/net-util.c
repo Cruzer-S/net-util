@@ -10,12 +10,31 @@
 
 #include <ifaddrs.h>
 
+#include <sys/fcntl.h>
+
 static thread_local char error_buffer[BUFSIZ];
 static thread_local char *error;
 
 const char * const net_util_error(void)
 {
 	return error;
+}
+
+int fcntl_set_nonblocking(int fd)
+{
+	int flags = fcntl(fd, F_GETFL);
+
+	if (flags == -1) {
+		error = "failed to fcntl(F_GETFL)";
+		return -1;
+	}
+
+	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK)) {
+		error = "failed to fcntl(F_SETFL)";
+		return -1;
+	}
+
+	return 0;
 }
 
 struct list *get_interface_address(int family, int flags, int masks)
