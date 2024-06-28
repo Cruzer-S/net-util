@@ -141,7 +141,7 @@ int server_create(char *hostname, char *service, int backlog)
 	int gai_ret;
 	
 	memset(&addr_req, 0x00, sizeof addr_req);
-	addr_req.ai_family = AF_INET6;
+	addr_req.ai_family = AF_UNSPEC;
 	addr_req.ai_socktype = SOCK_STREAM;
 	addr_req.ai_flags =  AI_ALL;
 
