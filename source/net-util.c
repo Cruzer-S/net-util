@@ -12,11 +12,40 @@
 
 #include <sys/fcntl.h>
 
+#include <sys/epoll.h>
+
 static Logger logger = NULL;
 
 void net_util_set_logger(Logger logg)
 {
 	logger = logg;
+}
+
+char *get_epoll_event_name(uint32_t events)
+{
+	static uint32_t event_list[] = {
+		EPOLLIN, EPOLLOUT, EPOLLRDHUP,
+		EPOLLPRI, EPOLLERR, EPOLLHUP,
+	};
+	static char *event_name[] = {
+		"EPOLLIN", "EPOLLOUT", "EPOLLRDHUP",
+		"EPOLLPRI", "EPOLLERR", "EPOLLHUP"
+	};
+
+	thread_local static char buffer[1024];
+
+	buffer[0] = '\0';
+
+	for (int i = 0; i < sizeof(event_list) / sizeof(uint32_t); i++)
+	{
+		if ((events & event_list[i]) > 0)
+		{
+			events ^= event_list[i];
+			strcpy(buffer, event_name[i]);
+		}
+	}
+
+	return buffer;
 }
 
 int reuse_address(int fd)
