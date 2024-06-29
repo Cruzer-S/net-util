@@ -1,1 +1,1 @@
-Cruzer-S/list
+Cruzer-S/logger Cruzer-S/list
