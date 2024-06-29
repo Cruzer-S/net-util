@@ -20,4 +20,6 @@ int server_create(char *hostname, char *service, int backlog);
 
 int fcntl_set_nonblocking(int fd);
 
+void net_util_set_logger(Logger );
+
 #endif

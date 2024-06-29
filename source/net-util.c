@@ -14,6 +14,11 @@
 
 static Logger logger = NULL;
 
+void net_util_set_logger(Logger logg)
+{
+	logger = logg;
+}
+
 int fcntl_set_nonblocking(int fd)
 {
 	int flags = fcntl(fd, F_GETFL);
