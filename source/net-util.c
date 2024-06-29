@@ -19,6 +19,20 @@ void net_util_set_logger(Logger logg)
 	logger = logg;
 }
 
+int reuse_address(int fd)
+{
+	int sockopt = 1;
+
+	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, 
+		       &sockopt, sizeof(sockopt)) == -1)
+	{
+		log(logger, PERRN, "failed to setsockopt()");
+		return -1;
+	}
+
+	return 0;
+}
+
 int fcntl_set_nonblocking(int fd)
 {
 	int flags = fcntl(fd, F_GETFL);
