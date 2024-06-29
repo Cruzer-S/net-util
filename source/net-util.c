@@ -12,25 +12,19 @@
 
 #include <sys/fcntl.h>
 
-static thread_local char error_buffer[BUFSIZ];
-static thread_local char *error;
-
-const char * const net_util_error(void)
-{
-	return error;
-}
+static Logger logger = NULL;
 
 int fcntl_set_nonblocking(int fd)
 {
 	int flags = fcntl(fd, F_GETFL);
 
 	if (flags == -1) {
-		error = "failed to fcntl(F_GETFL)";
+		log(logger, PERRN, "failed to fcntl(F_GETFL)");
 		return -1;
 	}
 
 	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK)) {
-		error = "failed to fcntl(F_SETFL)";
+		log(logger, PERRN, "failed to fcntl(F_SETFL)");
 		return -1;
 	}
 
@@ -47,14 +41,14 @@ struct list *get_interface_address(int family, int flags, int masks)
 
 	head = malloc(sizeof(struct list));
 	if (head == NULL) {
-		error = "failed to malloc()";
+		log(logger, PERRN, "failed to malloc()");
 		goto RETURN_NULL;
 	}
 
 	list_init_head(head);
 
 	if (getifaddrs(&ifaddrs) != 0) {
-		error = "failed to getifaddrs()";
+		log(logger, PERRN, "failed to getifaddrs()");
 		goto FREE_HEAD;
 	}
 
@@ -77,7 +71,7 @@ struct list *get_interface_address(int family, int flags, int masks)
 		
 		node = malloc(sizeof(struct address_data_node));
 		if (node == NULL) {
-			error = "failed to malloc()";
+			log(logger, PERRN, "failed to malloc()");
 			goto FREE_NODE;
 		}
 
@@ -124,9 +118,8 @@ char *get_host_from_address(struct sockaddr_storage *storage, int flags)
 	);
 
 	if (gai_ret != 0) {
-		sprintf(error_buffer, "failed to getnameinfo(): %s", 
-	  		gai_strerror(gai_ret));
-		error = error_buffer;
+		log(logger, ERRN, "failed to getnameinfo(): %s",
+	  			  gai_strerror(gai_ret));
 		return NULL;
 	}
 
@@ -147,9 +140,8 @@ int server_create(char *hostname, char *service, int backlog)
 
 	gai_ret = getaddrinfo(hostname, service, &addr_req, &server_ai);
 	if (gai_ret != 0) {
-		sprintf(error_buffer, "failed to getaddrinfo(): %s",
-	  		gai_strerror(gai_ret));
-		error = error_buffer;
+		log(logger, ERRN, "failed to getaddrinfo(): %s",
+	  			  gai_strerror(gai_ret));
 		goto RETURN_ERROR;
 	}
 
@@ -159,17 +151,17 @@ int server_create(char *hostname, char *service, int backlog)
 		server_ai->ai_protocol
 	);
 	if (server_fd == -1) {
-		error = "failed to socket()";
+		log(logger, PERRN, "failed to socket()");
 		goto FREEADDRINFO;
 	}
 
 	if (bind(server_fd, server_ai->ai_addr, server_ai->ai_addrlen) == -1) {
-		error = "failed to bind()";
+		log(logger, PERRN, "failed to bind()");
 		goto CLOSE_SERVER;
 	}
 
 	if (listen(server_fd, backlog) == -1) {
-		error = "failed to listen()";
+		log(logger, PERRN, "failed to listen()");
 		goto CLOSE_SERVER;
 	}
 

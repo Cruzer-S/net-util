@@ -2,6 +2,7 @@
 #define NET_UTIL_H__
 
 #include "Cruzer-S/list/list.h"
+#include "Cruzer-S/logger/logger.h"
 
 #include <sys/socket.h> // struct sockaddr_storage
 
@@ -18,7 +19,5 @@ char *get_host_from_address(struct sockaddr_storage *storage, int flags);
 int server_create(char *hostname, char *service, int backlog);
 
 int fcntl_set_nonblocking(int fd);
-
-const char * const net_util_error(void);
 
 #endif
