@@ -145,7 +145,7 @@ char *get_host_from_address(struct sockaddr_storage *storage, int flags)
 	return address;
 }
 
-int server_create(char *hostname, char *service, int backlog)
+int server_create(char *hostname, char *service, int backlog, bool reuseaddr)
 {
 	struct addrinfo addr_req, *server_ai;
 
@@ -172,6 +172,11 @@ int server_create(char *hostname, char *service, int backlog)
 	if (server_fd == -1) {
 		log(logger, PERRN, "failed to socket()");
 		goto FREEADDRINFO;
+	}
+
+	if (reuseaddr && reuse_address(server_fd) == -1) {
+		log(logger, ERRN, "failed to reuse_address");
+		goto CLOSE_SERVER;
 	}
 
 	if (bind(server_fd, server_ai->ai_addr, server_ai->ai_addrlen) == -1) {
