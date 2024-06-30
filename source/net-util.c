@@ -174,7 +174,7 @@ char *get_host_from_address(struct sockaddr_storage *storage, int flags)
 	return address;
 }
 
-int server_create(char *hostname, char *service, int backlog, bool reuseaddr)
+int make_listener(char *hostname, char *service, int backlog, bool reuseaddr)
 {
 	struct addrinfo addr_req, *server_ai;
 
