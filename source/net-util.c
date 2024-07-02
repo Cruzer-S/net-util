@@ -239,7 +239,7 @@ int send_file(int fd, char *filename)
 	while (true)
 	{
 		char buffer[BUFSIZ];
-		int readlen = read(rfd, buffer BUFSIZ);
+		int readlen = read(rfd, buffer, BUFSIZ);
 
 		if (readlen == 0)
 			break;
