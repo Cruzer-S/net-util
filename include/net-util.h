@@ -28,4 +28,6 @@ void net_util_set_logger(Logger );
 
 char *get_epoll_event_name(uint32_t events);
 
+int send_file(int fd, char *filename);
+
 #endif

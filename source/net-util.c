@@ -226,3 +226,36 @@ CLOSE_SERVER:	close(server_fd);
 FREEADDRINFO:	freeaddrinfo(server_ai);
 RETURN_ERROR:	return -1;
 }
+
+int send_file(int fd, char *filename)
+{
+	int rfd = open(filename, O_RDWR);
+
+	if (rfd == -1) {
+		log(logger, PERRN, "failed to open file: %s", filename);
+		return -1;
+	}
+
+	while (true)
+	{
+		char buffer[BUFSIZ];
+		int readlen = read(rfd, buffer BUFSIZ);
+
+		if (readlen == 0)
+			break;
+
+		if (readlen == -1) {
+			log(logger, PERRN, "failed to read()");
+			close(rfd);
+			return -1;
+		}
+
+		if (send(fd, buffer, readlen, 0) == -1) {
+			log(logger, PERRN, "failed to send()");
+			close(rfd);
+			return -1;
+		}
+	}
+
+	close(rfd);
+}
