@@ -14,13 +14,6 @@
 
 #include <sys/epoll.h>
 
-static Logger logger = NULL;
-
-void net_util_set_logger(Logger logg)
-{
-	logger = logg;
-}
-
 char *get_epoll_event_name(uint32_t events)
 {
 	static uint32_t event_list[] = {
@@ -54,10 +47,7 @@ int reuse_address(int fd)
 
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, 
 		       &sockopt, sizeof(sockopt)) == -1)
-	{
-		log(logger, PERRN, "failed to setsockopt()");
 		return -1;
-	}
 
 	return 0;
 }
@@ -66,15 +56,11 @@ int fcntl_set_nonblocking(int fd)
 {
 	int flags = fcntl(fd, F_GETFL);
 
-	if (flags == -1) {
-		log(logger, PERRN, "failed to fcntl(F_GETFL)");
+	if (flags == -1)
 		return -1;
-	}
 
-	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK)) {
-		log(logger, PERRN, "failed to fcntl(F_SETFL)");
+	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK))
 		return -1;
-	}
 
 	return 0;
 }
@@ -88,17 +74,13 @@ struct list *get_interface_address(int family, int flags, int masks)
 	size_t addrlen;
 
 	head = malloc(sizeof(struct list));
-	if (head == NULL) {
-		log(logger, PERRN, "failed to malloc()");
+	if (head == NULL)
 		goto RETURN_NULL;
-	}
 
 	list_init_head(head);
 
-	if (getifaddrs(&ifaddrs) != 0) {
-		log(logger, PERRN, "failed to getifaddrs()");
+	if (getifaddrs(&ifaddrs) != 0)
 		goto FREE_HEAD;
-	}
 
 	addrlen = (family == AF_INET) ? sizeof(struct sockaddr_in)
 		                      : sizeof(struct sockaddr_in6);
@@ -118,10 +100,8 @@ struct list *get_interface_address(int family, int flags, int masks)
 			continue;
 		
 		node = malloc(sizeof(struct address_data_node));
-		if (node == NULL) {
-			log(logger, PERRN, "failed to malloc()");
+		if (node == NULL)
 			goto FREE_NODE;
-		}
 
 		memcpy(&node->address, ifa->ifa_addr, addrlen);
 
@@ -165,11 +145,8 @@ char *get_host_from_address(struct sockaddr_storage *storage, int flags)
 		NULL, 0, flags
 	);
 
-	if (gai_ret != 0) {
-		log(logger, ERRN, "failed to getnameinfo(): %s",
-	  			  gai_strerror(gai_ret));
+	if (gai_ret != 0)
 		return NULL;
-	}
 
 	return address;
 }
@@ -187,36 +164,25 @@ int make_listener(char *hostname, char *service, int backlog, bool reuseaddr)
 	addr_req.ai_flags =  AI_ALL;
 
 	gai_ret = getaddrinfo(hostname, service, &addr_req, &server_ai);
-	if (gai_ret != 0) {
-		log(logger, ERRN, "failed to getaddrinfo(): %s",
-	  			  gai_strerror(gai_ret));
+	if (gai_ret != 0)
 		goto RETURN_ERROR;
-	}
 
 	server_fd = socket(
 		server_ai->ai_family,
 		server_ai->ai_socktype,
 		server_ai->ai_protocol
 	);
-	if (server_fd == -1) {
-		log(logger, PERRN, "failed to socket()");
+	if (server_fd == -1)
 		goto FREEADDRINFO;
-	}
 
-	if (reuseaddr && reuse_address(server_fd) == -1) {
-		log(logger, ERRN, "failed to reuse_address");
+	if (reuseaddr && reuse_address(server_fd) == -1)
 		goto CLOSE_SERVER;
-	}
 
-	if (bind(server_fd, server_ai->ai_addr, server_ai->ai_addrlen) == -1) {
-		log(logger, PERRN, "failed to bind()");
+	if (bind(server_fd, server_ai->ai_addr, server_ai->ai_addrlen) == -1)
 		goto CLOSE_SERVER;
-	}
 
-	if (listen(server_fd, backlog) == -1) {
-		log(logger, PERRN, "failed to listen()");
+	if (listen(server_fd, backlog) == -1)
 		goto CLOSE_SERVER;
-	}
 
 	freeaddrinfo(server_ai);
 
@@ -230,11 +196,10 @@ RETURN_ERROR:	return -1;
 int send_file(int fd, char *filename)
 {
 	int rfd = open(filename, O_RDWR);
+	int total_len = 0;
 
-	if (rfd == -1) {
-		log(logger, PERRN, "failed to open file: %s", filename);
+	if (rfd == -1)
 		return -1;
-	}
 
 	while (true)
 	{
@@ -245,17 +210,19 @@ int send_file(int fd, char *filename)
 			break;
 
 		if (readlen == -1) {
-			log(logger, PERRN, "failed to read()");
 			close(rfd);
 			return -1;
 		}
 
 		if (send(fd, buffer, readlen, 0) == -1) {
-			log(logger, PERRN, "failed to send()");
 			close(rfd);
 			return -1;
 		}
+
+		total_len += readlen;
 	}
 
 	close(rfd);
+
+	return total_len;
 }
