@@ -5,6 +5,7 @@
 #include <string.h>
 #include <threads.h>
 
+#include <net/if.h>
 #include <netdb.h>
 #include <unistd.h>
 
@@ -13,6 +14,32 @@
 #include <sys/fcntl.h>
 
 #include <sys/epoll.h>
+
+char *get_hostname(int family)
+{
+	char *hostname = NULL;
+
+	struct list *address = get_interface_address(
+		family, IFF_UP, IFF_LOOPBACK
+	);
+
+	if (LIST_IS_EMPTY(address))
+		return NULL;
+
+	LIST_FOREACH_ENTRY(address, addr, struct address_data_node, list) {
+		hostname = get_host_from_address(
+			&addr->address, NI_NUMERICHOST
+		);
+
+		if (hostname != NULL)
+			break;
+	}
+
+	free_interface_address(address);
+
+	return hostname;
+}
+
 
 char *get_epoll_event_name(uint32_t events)
 {

@@ -18,6 +18,8 @@ void free_interface_address(struct list *head);
 
 char *get_host_from_address(struct sockaddr_storage *storage, int flags);
 
+char *get_hostname(int family);
+
 int make_listener(char *hostname, char *service, int backlog, bool reuseaddr);
 
 int fcntl_set_nonblocking(int fd);
